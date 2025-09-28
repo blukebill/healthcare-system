@@ -22,14 +22,14 @@ jobs:
     permissions:
       contents: write
       packages: write
-      secuirty-events: write
+      security-events: write
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -57,7 +57,8 @@ jobs:
             if curl -fsS http://localhost:8000/health >/dev/null; then echo "App is healthy"; break; fi
             echo "Waiting for app... ($i)"; sleep 2;
           done
-      - name: E2E tests(http)
+
+      - name: E2E tests (http)
         env:
           BASE_URL: http://localhost:8000
         run: pytest -m e2e --junitxml=reports/junit-e2e.xml
@@ -66,7 +67,7 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.test.yml down --volumes --remove-orphans
 
-      - name: push image to ghcr
+      - name: Push image to GHCR
         run: docker push $IMAGE
 
       - name: Upload test reports
@@ -78,44 +79,44 @@ jobs:
       - name: Summarize
         run: |
           echo "## Build & Test Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Commit: \'${{ github.sha }}\'" >> $GITHUB_STEP_SUMMARY
-          echo "- Image: \'${{ env.IMAGE }}\'" >> $GITHUB_STEP_SUMMARY
-          echo "- Unit/Integration & E2E tests executed" >> GUTHUB_STEP_SUMMARY
+          echo "- Commit: '${{ github.sha }}'" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: '${{ env.IMAGE }}'" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit/Integration & E2E tests executed" >> $GITHUB_STEP_SUMMARY
 
-deploy:
-  runs-on: ubuntu-latest
-  needs: build_test
-  permissions:
-    contents: write
-    packages: read
-  environment: staging
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_test
+    permissions:
+      contents: write
+      packages: read
+    environment: staging
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Choose image to deploy 
-      run: |
-        if [ -n "${{ inputs.rollback_to }}" ]; then
-          echo "IMAGE=ghcr.io/$"{{ github.repository_owner }}/healthcare-app:${{ inputs.rollback_to }}" >> $GITHUB_ENV
-        else
-          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/healthcare-app:${{ github.sha }}" >> $GITHUB_ENV
-        fi
+      - name: Choose image to deploy
+        run: |
+          if [ -n "${{ inputs.rollback_to }}" ]; then
+            echo "IMAGE=ghcr.io/${{ github.repository_owner }}/healthcare-app:${{ inputs.rollback_to }}" >> $GITHUB_ENV
+          else
+            echo "IMAGE=ghcr.io/${{ github.repository_owner }}/healthcare-app:${{ github.sha }}" >> $GITHUB_ENV
+          fi
 
-    - name: Pull image
-      run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password -stdin
-        docker pull $IMAGE
+      - name: Pull image
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker pull $IMAGE
 
-    - name: Deploy & health check
-      run: |
-        cat > docker-compose.deploy.yml <<'YAML'
-      services:
-        app:
-          image: ${IMAGE}
-          ports: ["8000:8000"]
-          environment:
-            - APP_VERSION=${DEPLOY_TAG:-unknown}
-      YAML
+      - name: Deploy & health check
+        run: |
+          cat > docker-compose.deploy.yml <<'YAML'
+          services:
+            app:
+              image: ${IMAGE}
+              ports: ["8000:8000"]
+              environment:
+                - APP_VERSION=${DEPLOY_TAG:-unknown}
+          YAML
           export DEPLOY_TAG=$(echo "$IMAGE" | awk -F: '{print $NF}')
           docker compose -f docker-compose.deploy.yml up -d
           for i in {1..30}; do
@@ -124,15 +125,16 @@ deploy:
           done
           curl -fsS http://localhost:8000/health | tee health.json
 
-    - name: logs (monitoring)
-      run: docker ps && docker logs $(docker ps -q --filter "publish=8000") --tail=200 || true
+      - name: Logs (monitoring)
+        run: docker ps && docker logs $(docker ps -q --filter "publish=8000") --tail=200 || true
 
-    - name: health snapshot upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: deploy-health
-        path: health.json
+      - name: Health snapshot upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-health
+          path: health.json
 
-    - name: teardown deployment
-      if: always()
-      run: docker compose -f docker-compose.deploy.yml down --volumes --remove-orphans
+      - name: Teardown deployment
+        if: always()
+        run: docker compose -f docker-compose.deploy.yml down --volumes --remove-orphans
+
