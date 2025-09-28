@@ -34,7 +34,7 @@ def list_patients():
 
 @app.post("/patients")
 def create_patient():
-    data = request.get_json(force=True, silent-True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     if not validate_patient(data):
         return jsonify({"error": "invalid payload"}), 400
     PATIENTS.append({"id": data["id"], "name": data["name"]})
