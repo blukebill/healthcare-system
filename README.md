@@ -8,5 +8,7 @@ minimal distributed healthcare (demo api) with a complete ci/cd pipeline:
 ##run locally
 
 docker build -t healthcare-app:local .
+
 docker compose -f docker-compose.test.yml up -d
+
 curl -s http://localhost:8000/health
