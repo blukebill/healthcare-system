@@ -41,6 +41,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Unit & integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest -m "not e2e" --junitxml=reports/junit.xml --cov=src --cov-report=xml:reports/coverage.xml
 
       - name: Build Docker image
