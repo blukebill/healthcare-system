@@ -62,6 +62,7 @@ jobs:
 
       - name: E2E tests (http)
         env:
+          PYTHONPATH: ${{ github.workspace }}
           BASE_URL: http://localhost:8000
         run: pytest -m e2e --junitxml=reports/junit-e2e.xml
 
